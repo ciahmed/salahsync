@@ -594,14 +594,28 @@ main {
 .close-btn {
     color: var(--text-secondary);
     float: right;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: bold;
     cursor: pointer;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    margin-top: -5px;
 }
 
 .close-btn:hover,
 .close-btn:focus {
-    color: var(--accent-gold);
+    color: #fff;
+    background: rgba(231, 76, 60, 0.9);
+    border-color: rgba(231, 76, 60, 1);
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.4);
+    transform: rotate(90deg);
     text-decoration: none;
     cursor: pointer;
 }
@@ -620,6 +634,18 @@ main {
 .calendar-table th, .calendar-table td {
     padding: 1rem;
     border-bottom: 1px solid var(--card-border);
+}
+
+.calendar-table th:first-child, .calendar-table td:first-child {
+    text-align: left;
+}
+
+.calendar-table th:nth-child(2), .calendar-table td:nth-child(2) {
+    text-align: center;
+}
+
+.calendar-table th:last-child, .calendar-table td:last-child {
+    text-align: right;
 }
 
 .calendar-table th {
@@ -726,6 +752,7 @@ main {
     letter-spacing: 2px;
     cursor: pointer;
     transition: all 0.2s ease;
+    touch-action: manipulation; /* Fix double-tap to zoom on mobile devices */
 }
 
 .tasbeeh-tap-btn:hover {
@@ -989,6 +1016,13 @@ body.light-theme .juris-option:hover {
         flex-direction: column;
         gap: 0.6rem;
     }
+    .calendar-table th, .calendar-table td {
+        padding: 0.6rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    .calendar-table th {
+        font-size: 0.75rem;
+    }
 }
 
 .adj-input-wrapper {
@@ -1067,6 +1101,20 @@ body.light-theme .adj-input-wrapper input[type="number"] {
 
 .settings-save-btn:active {
     transform: translateY(0) scale(0.98);
+}
+
+.settings-demo-btn {
+    transition: all 0.25s ease !important;
+}
+
+.settings-demo-btn:hover {
+    background: linear-gradient(135deg, rgba(46,204,113,0.3), rgba(39,174,96,0.3)) !important;
+    box-shadow: 0 0 20px rgba(46,204,113,0.25);
+    transform: translateY(-1px);
+}
+
+.settings-demo-btn:active {
+    transform: scale(0.98);
 }
 
 /* ==========================================================================

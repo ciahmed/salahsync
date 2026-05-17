@@ -567,14 +567,15 @@ function renderPrayerTimes() {
     container.innerHTML = '';
     
     const now = new Date();
-    const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    now.setMilliseconds(0);
     
     let activeIndex = -1;
     let nextIndex = 0;
     
     for (let i = 0; i < PRAYERS.length; i++) {
         const time = prayerTimesData[PRAYERS[i].id];
-        if (currentTimeStr >= time) {
+        const prayerTime = parseTime(time);
+        if (now >= prayerTime) {
             activeIndex = i;
             nextIndex = (i + 1) % PRAYERS.length;
         }
@@ -595,6 +596,19 @@ function renderPrayerTimes() {
             const isFajr = nextPrayerId === 'Fajr';
             const audioId = isFajr ? 'adhan-fajr-audio' : 'adhan-audio';
             playAdhanTest(audioId, nextPrayerId);
+            
+            // If the next prayer is Dhuhr and we have original times backed up, let's restore them!
+            if (nextPrayerId === 'Dhuhr' && window.originalPrayerTimes) {
+                setTimeout(async () => {
+                    window.originalPrayerTimes = null;
+                    if (window.currentLat !== undefined && window.currentLon !== undefined) {
+                        await fetchPrayerTimes(window.currentLat, window.currentLon);
+                    } else {
+                        await handleLocationFallback();
+                    }
+                    showDemoToast("Demo complete! Original prayer times restored.");
+                }, 8000); // Wait 8 seconds of Adhan playback before restoring
+            }
         }
     }
 
@@ -636,9 +650,12 @@ function renderPrayerTimes() {
 }
 
 function parseTime(timeStr) {
-    const [hours, minutes] = timeStr.split(':');
+    const parts = timeStr.split(':');
+    const hours = parseInt(parts[0]);
+    const minutes = parseInt(parts[1]);
+    const seconds = parts[2] ? parseInt(parts[2]) : 0;
     const d = new Date();
-    d.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    d.setHours(hours, minutes, seconds, 0);
     return d;
 }
 
@@ -661,6 +678,7 @@ function updateCountdown() {
     const nextPrayer = PRAYERS[window.nextPrayerIndex];
     let targetTime = parseTime(prayerTimesData[nextPrayer.id]);
     const now = new Date();
+    now.setMilliseconds(0);
     
     if (targetTime < now) {
         targetTime.setDate(targetTime.getDate() + 1);
@@ -748,6 +766,13 @@ document.addEventListener('DOMContentLoaded', () => {
             settingsModal.style.display = "none";
         }
 
+        const demoBtn = document.getElementById('settings-demo-btn');
+        if (demoBtn) {
+            demoBtn.onclick = function() {
+                triggerDhuhrDemo();
+            }
+        }
+
         // Save settings and reload page data
         saveSettingsBtn.onclick = async function() {
             // Read theme
@@ -820,7 +845,10 @@ async function fetchCalendar(lat, lon) {
             
             days.forEach(dayInfo => {
                 const tr = document.createElement('tr');
-                const enDate = dayInfo.date.gregorian.date;
+                const enDateRaw = dayInfo.date.gregorian.date; // e.g. "17-05-2026"
+                const dateParts = enDateRaw.split('-');
+                const enDate = dateParts.length === 3 ? `${dateParts[1]}-${dateParts[0]}-${dateParts[2]}` : enDateRaw;
+                
                 const hijriDate = `${dayInfo.date.hijri.day} ${dayInfo.date.hijri.month.en}`;
                 const weekDay = dayInfo.date.gregorian.weekday.en;
                 
@@ -968,5 +996,78 @@ function unlockAudio() {
 
 function unlockAudioPageListener() {
     unlockAudio();
+}
+
+function triggerDhuhrDemo() {
+    // 1. Close settings modal
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
+    
+    // Unlock Audio Context immediately if not already unlocked
+    unlockAudio();
+    
+    const now = new Date();
+    const pad = (num) => num.toString().padStart(2, '0');
+    const getRelTimeStr = (offsetMs) => {
+        const t = new Date(now.getTime() + offsetMs);
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+    };
+    
+    // Backup original times if not already backed up
+    if (!window.originalPrayerTimes) {
+        window.originalPrayerTimes = { ...prayerTimesData };
+    }
+    
+    // Generate relative times to guarantee Dhuhr is the immediate next prayer
+    prayerTimesData['Fajr'] = getRelTimeStr(-120 * 60 * 1000);    // 2 hours ago
+    prayerTimesData['Sunrise'] = getRelTimeStr(-60 * 60 * 1000);   // 1 hour ago
+    prayerTimesData['Dhuhr'] = getRelTimeStr(10 * 1000);           // 10 seconds in the future
+    prayerTimesData['Asr'] = getRelTimeStr(120 * 60 * 1000);       // 2 hours in the future
+    prayerTimesData['Sunset'] = getRelTimeStr(180 * 60 * 1000);    // 3 hours in the future
+    prayerTimesData['Maghrib'] = getRelTimeStr(240 * 60 * 1000);   // 4 hours in the future
+    prayerTimesData['Isha'] = getRelTimeStr(300 * 60 * 1000);      // 5 hours in the future
+    
+    // Make sure Dhuhr notifications are enabled
+    prayerSettings['Dhuhr'] = true;
+    localStorage.setItem('prayerSettings', JSON.stringify(prayerSettings));
+    
+    // 3. Force re-calculation
+    renderPrayerTimes();
+    updateCountdown();
+    
+    // 4. Show a gorgeous toast message
+    showDemoToast("Dhuhr Demo Started! Auto-playing Adhan in 10 seconds...");
+}
+
+function showDemoToast(message) {
+    let toast = document.getElementById('demo-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'demo-toast';
+        toast.style.position = 'fixed';
+        toast.style.bottom = '30px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+        toast.style.color = '#fff';
+        toast.style.padding = '1rem 2rem';
+        toast.style.borderRadius = '30px';
+        toast.style.boxShadow = '0 10px 30px rgba(46,204,113,0.35)';
+        toast.style.fontWeight = '600';
+        toast.style.zIndex = '99999';
+        toast.style.fontFamily = "'Outfit', sans-serif";
+        toast.style.letterSpacing = '0.5px';
+        toast.style.border = '1px solid rgba(255,255,255,0.2)';
+        toast.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(25px)';
+    }, 4500);
 }
 

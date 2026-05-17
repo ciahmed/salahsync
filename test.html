@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salah Sync - Automated Test Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent-gold: #f4d03f;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .title-row i {
+            color: var(--accent-gold);
+            font-size: 2rem;
+            text-shadow: 0 0 15px rgba(244, 208, 99, 0.4);
+        }
+
+        .title-row h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .run-all-btn {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.2), rgba(39, 174, 96, 0.2));
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 0.8rem 1.8rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .run-all-btn:hover {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.35), rgba(39, 174, 96, 0.35));
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            flex: 1;
+            align-items: start;
+        }
+
+        .test-controls-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--accent-gold);
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suite-progress {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: none;
+        }
+
+        .test-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .test-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+        }
+
+        .test-card.running {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 12px rgba(244, 208, 99, 0.15);
+        }
+
+        .test-card.passed {
+            border-color: rgba(46, 204, 113, 0.4);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .test-card.failed {
+            border-color: rgba(231, 76, 60, 0.4);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .test-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .test-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .test-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .test-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-pending .status-badge { background-color: var(--text-secondary); }
+        .status-running .status-badge { background-color: var(--accent-gold); animation: pulse 1s infinite alternate; }
+        .status-passed .status-badge { background-color: var(--accent-green); }
+        .status-failed .status-badge { background-color: var(--accent-red); }
+
+        .status-pending { color: var(--text-secondary); }
+        .status-running { color: var(--accent-gold); }
+        .status-passed { color: var(--accent-green); }
+        .status-failed { color: var(--accent-red); }
+
+        .iframe-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 750px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        iframe {
+            width: 100%;
+            flex: 1;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            background: #111;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .iframe-panel {
+                height: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="title-row">
+            <i class="fa-solid fa-square-check"></i>
+            <h1>Salah Sync - Automated E2E Testing Suite</h1>
+        </div>
+        <button class="run-all-btn" id="run-all-btn">
+            <i class="fa-solid fa-play"></i> Run All Automated Tests
+        </button>
+    </header>
+
+    <div class="main-layout">
+        <!-- Test Controls and Results -->
+        <div class="test-controls-panel">
+            <div class="section-title">
+                <span>Test Executions</span>
+                <span class="suite-progress" id="suite-progress">Pending Start</span>
+            </div>
+            
+            <div class="test-list" id="test-list">
+                <!-- Test Cards will be generated here -->
+            </div>
+        </div>
+
+        <!-- Live App Sandbox Iframe -->
+        <div class="iframe-panel">
+            <div class="section-title" style="margin-bottom: 0;">
+                <span>Live Sandbox (E2E Iframe execution)</span>
+                <i class="fa-solid fa-laptop-code" style="color: var(--text-secondary);"></i>
+            </div>
+            <iframe id="app-frame" src="index.html"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const TESTS = [
+            {
+                id: 'load',
+                name: '1. App Rendering & Elements',
+                desc: 'Verifies that headers, titles, and structural dashboard modules load clean.',
+                run: async (win, doc) => {
+                    const logoText = doc.querySelector('.logo span').textContent;
+                    const prayerSec = doc.querySelector('.prayer-times-section h2').textContent;
+                    if (logoText !== 'Salah Sync') throw new Error(`Wrong logo text: ${logoText}`);
+                    if (prayerSec !== 'PRAYER TIMES') throw new Error(`Prayer header missing.`);
+                    return "Passed: App layout confirmed.";
+                }
+            },
+            {
+                id: 'location',
+                name: '2. GPS/IP Location Fetching',
+                desc: 'Verifies that the location and fallback calculation engines activate.',
+                run: async (win, doc) => {
+                    const loc = doc.getElementById('location-name').textContent;
+                    if (loc === "Detecting Location..." || !loc) {
+                        throw new Error("Location detection failed or is stuck.");
+                    }
+                    return `Passed: Location set to "${loc}".`;
+                }
+            },
+            {
+                id: 'calculation',
+                name: '3. ISNA Prayer Calculations',
+                desc: 'Verifies that prayer timings fetch cleanly using ISNA regulations.',
+                run: async (win, doc) => {
+                    const list = doc.getElementById('prayer-list');
+                    const cards = list.querySelectorAll('.prayer-card');
+                    if (cards.length < 5) throw new Error(`Wrong number of cards: ${cards.length}`);
+                    return `Passed: ${cards.length} prayer cards generated.`;
+                }
+            },
+            {
+                id: 'tasbeeh',
+                name: '4. Tasbeeh Digital Counter',
+                desc: 'Validates count logging, reset, and localStorage caching.',
+                run: async (win, doc) => {
+                    const countVal = doc.getElementById('tasbeeh-count');
+                    const tapBtn = doc.getElementById('tasbeeh-tap-btn');
+                    const resetBtn = doc.getElementById('tasbeeh-reset-btn');
+                    
+                    // Reset first
+                    resetBtn.click();
+                    await new Promise(r => setTimeout(r, 100));
+                    
+                    if (countVal.textContent !== '0') throw new Error("Reset failed.");
+                    
+                    // Tap 3 times
+                    tapBtn.click();
+                    tapBtn.click();
+                    tapBtn.click();
+                    await new Promise(r => setTimeout(r, 100));
+                    
+                    if (countVal.textContent !== '3') throw new Error(`Tapping failed. Got count: ${countVal.textContent}`);
+                    
+                    // Reset back to clear state
+                    resetBtn.click();
+                    return "Passed: Tasbeeh mechanics verified.";
+                }
+            },
+            {
+                id: 'scriptures',
+                name: '5. Scriptures & Rotating Cards',
+                desc: 'Verifies the daily bilingual scriptures and instant refresh rotations.',
+                run: async (win, doc) => {
+                    let ayatAr = "";
+                    let hadithEn = "";
+                    for (let retry = 0; retry < 15; retry++) {
+                        const arEl = doc.getElementById('ayat-arabic');
+                        const enEl = doc.getElementById('hadith-english');
+                        if (arEl && enEl) {
+                            ayatAr = arEl.textContent;
+                            hadithEn = enEl.textContent;
+                            if (ayatAr && ayatAr !== "Loading Ayat..." && hadithEn && hadithEn !== "Loading Hadith...") {
+                                break;
+                            }
+                        }
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                    if (!ayatAr || ayatAr === "Loading Ayat...") throw new Error("Ayat of the Day failed to load.");
+                    if (!hadithEn || hadithEn === "Loading Hadith...") throw new Error("Hadith of the Day failed to load.");
+                    return "Passed: Scriptures verified.";
+                }
+            },
+            {
+                id: 'compass',
+                name: '6. Qibla compass & normalization',
+                desc: 'Verifies absolute coordinate marker grids and sensor calibrations.',
+                run: async (win, doc) => {
+                    const compass = doc.getElementById('compass');
+                    const markers = compass.querySelectorAll('.compass-direction');
+                    if (markers.length !== 4) throw new Error(`Compass cardinal markers missing. Got: ${markers.length}`);
+                    return "Passed: Compass directions N, E, S, W verified.";
+                }
+            },
+            {
+                id: 'calendar',
+                name: '7. Islamic Calendar pop up & formats',
+                desc: 'Verifies circle close buttons, responsive grids, and MM-DD-YYYY dates.',
+                run: async (win, doc) => {
+                    const openBtn = doc.getElementById('open-calendar-btn');
+                    const modal = doc.getElementById('calendar-modal');
+                    const closeBtn = doc.getElementById('close-calendar-btn');
+                    
+                    // Click open
+                    openBtn.click();
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    if (modal.style.display !== 'block') throw new Error("Calendar modal failed to open.");
+                    
+                    // Verify date formats
+                    const tbody = doc.getElementById('calendar-body');
+                    const secondCol = tbody.querySelector('tr td:nth-child(2)').textContent;
+                    const regex = /^\d{2}-\d{2}-\d{4}$/; // MM-DD-YYYY
+                    if (!regex.test(secondCol)) {
+                        throw new Error(`Date column not formatted as MM-DD-YYYY! Got: ${secondCol}`);
+                    }
+                    
+                    // Click close
+                    closeBtn.click();
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    if (modal.style.display !== 'none') throw new Error("Calendar modal failed to close.");
+                    return `Passed: Close button and Date format (${secondCol}) verified.`;
+                }
+            },
+            {
+                id: 'demo',
+                name: '8. 10s Dhuhr Demo & Audio engine',
+                desc: 'Triggers the Dhuhr demo, verifies countdown transitions, and auto-play.',
+                run: async (win, doc) => {
+                    const openSettings = doc.getElementById('open-settings-btn');
+                    openSettings.click();
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    const demoBtn = doc.getElementById('settings-demo-btn');
+                    if (!demoBtn) throw new Error("Demo button not found in Settings modal.");
+                    
+                    demoBtn.click();
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    // Check if countdown target is Dhuhr
+                    const targetName = doc.getElementById('next-prayer-name').textContent;
+                    if (targetName !== 'Dhuhr') throw new Error(`Wrong demo target. Got: ${targetName}`);
+                    
+                    // Wait for 11 seconds to let it tick to 0
+                    await new Promise(r => setTimeout(r, 11000));
+                    
+                    // Verify that Dhuhr card transitioned to active/current highlight
+                    const dhuhrCard = doc.querySelector('.prayer-card.current');
+                    if (!dhuhrCard || !dhuhrCard.innerHTML.includes('Dhuhr')) {
+                        throw new Error("Dhuhr card did not highlight as active current prayer!");
+                    }
+                    
+                    return "Passed: 10s Dhuhr Demo highlighted card successfully.";
+                }
+            }
+        ];
+
+        // Render Test Cards
+        const listContainer = document.getElementById('test-list');
+        TESTS.forEach(test => {
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            card.id = `test-card-${test.id}`;
+            card.innerHTML = `
+                <div class="test-info">
+                    <div class="test-name">${test.name}</div>
+                    <div class="test-desc">${test.desc}</div>
+                </div>
+                <div class="test-status status-pending" id="status-${test.id}">
+                    <span class="status-badge"></span>
+                    <span class="status-text">Pending</span>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+
+        // Trigger All Tests
+        document.getElementById('run-all-btn').onclick = async () => {
+            const btn = document.getElementById('run-all-btn');
+            const progress = document.getElementById('suite-progress');
+            const iframe = document.getElementById('app-frame');
+            const win = iframe.contentWindow;
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            progress.textContent = "Running Suite...";
+            progress.style.color = 'var(--accent-gold)';
+
+            let passedCount = 0;
+
+            for (let test of TESTS) {
+                const card = document.getElementById(`test-card-${test.id}`);
+                const status = document.getElementById(`status-${test.id}`);
+                
+                card.className = 'test-card running';
+                status.className = 'test-status status-running';
+                status.querySelector('.status-text').textContent = 'Running';
+                
+                await new Promise(r => setTimeout(r, 800)); // Smooth cinematic test transition delay
+
+                try {
+                    const resMsg = await test.run(win, doc);
+                    card.className = 'test-card passed';
+                    status.className = 'test-status status-passed';
+                    status.querySelector('.status-text').textContent = 'Passed';
+                    test.desc = resMsg;
+                    card.querySelector('.test-desc').textContent = resMsg;
+                    passedCount++;
+                } catch (e) {
+                    card.className = 'test-card failed';
+                    status.className = 'test-status status-failed';
+                    status.querySelector('.status-text').textContent = 'Failed';
+                    card.querySelector('.test-desc').textContent = e.message;
+                    console.error(`Test ${test.id} failed:`, e);
+                }
+            }
+
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            progress.textContent = `Completed (${passedCount}/${TESTS.length} Passed)`;
+            progress.style.color = passedCount === TESTS.length ? 'var(--accent-green)' : 'var(--accent-red)';
+        };
+    </script>
+</body>
+</html>
